@@ -11,19 +11,35 @@ public class FunctionEvaluator
     private static double Calculate(string postfix)
     {
         var stack = new Stack<double>();
+        var number = string.Empty;
+
         foreach (var item in postfix)
         {
-            if (IsOperator(item))
+            if (char.IsDigit(item) || item == '.')
+            {
+                number += item;
+            }
+            else if (item == ' ')
+            {
+                if (!string.IsNullOrEmpty(number))
+                {
+                    stack.Push(double.Parse(number, System.Globalization.CultureInfo.InvariantCulture));
+                    number = string.Empty;
+                }
+            }
+            else if (IsOperator(item))
             {
                 var operator2 = stack.Pop();
                 var operator1 = stack.Pop();
                 stack.Push(Result(operator1, item, operator2));
             }
-            else
-            {
-                stack.Push(char.GetNumericValue(item));
-            }
         }
+
+        if (!string.IsNullOrEmpty(number))
+        {
+            stack.Push(double.Parse(number, System.Globalization.CultureInfo.InvariantCulture));
+        }
+
         return stack.Pop();
     }
 
@@ -36,7 +52,7 @@ public class FunctionEvaluator
             '*' => operator1 * operator2,
             '/' => operator1 / operator2,
             '^' => Math.Pow(operator1, operator2),
-            _ => throw new Exception("Invalid expresion"),
+            _ => throw new Exception("Invalid expression"),
         };
     }
 
@@ -44,47 +60,63 @@ public class FunctionEvaluator
     {
         var stack = new Stack<char>();
         var postfix = string.Empty;
+        var number = string.Empty;
+
         foreach (var item in infix)
         {
-            if (IsOperator(item))
+            if (char.IsDigit(item) || item == '.')
             {
-                if (stack.Count == 0)
-                {
-                    stack.Push(item);
-                }
-                else
-                {
-                    if (item == ')')
-                    {
-                        do
-                        {
-                            postfix += stack.Pop();
-                        } while (stack.Peek() != '(');
-                        stack.Pop();
-                    }
-                    else
-                    {
-                        if (PriorityExpression(item) > PriorityStack(stack.Peek()))
-                        {
-                            stack.Push(item);
-                        }
-                        else
-                        {
-                            postfix += stack.Pop();
-                            stack.Push(item);
-                        }
-                    }
-                }
+                number += item;
             }
             else
             {
-                postfix += item;
+                if (number.Length > 0)
+                {
+                    postfix += number + " ";
+                    number = string.Empty;
+                }
+
+                if (IsOperator(item))
+                {
+                    if (item == '(')
+                    {
+                        stack.Push(item);
+                    }
+                    else if (item == ')')
+                    {
+                        while (stack.Count > 0 && stack.Peek() != '(')
+                        {
+                            postfix += stack.Pop() + " ";
+                        }
+                        if (stack.Count > 0 && stack.Peek() == '(')
+                            stack.Pop();
+                    }
+                    else
+                    {
+                        while (stack.Count > 0 && PriorityExpression(item) <= PriorityStack(stack.Peek()))
+                        {
+                            postfix += stack.Pop() + " ";
+                        }
+                        stack.Push(item);
+                    }
+                }
+                else if (item != ' ')
+                {
+                    throw new Exception("Invalid character in expression");
+                }
             }
         }
-        do
+
+        if (number.Length > 0)
         {
-            postfix += stack.Pop();
-        } while (stack.Count > 0);
+            postfix += number + " ";
+        }
+
+        while (stack.Count > 0)
+        {
+            postfix += stack.Pop() + " ";
+        }
+
         return postfix;
     }
 
